@@ -150,9 +150,14 @@
       };
 
       const clearTestCookies = () => {
+        const paths = ["/", new URL("./", location.href).pathname];
+        const domains = ["", `; Domain=${location.hostname}`, `; Domain=.${location.hostname}`];
         for (const name of cookieNames) {
-          document.cookie = `${name}=; Max-Age=0; Path=/; SameSite=Lax; Secure`;
-          document.cookie = `${name}=; Max-Age=0; Path=${location.pathname}; SameSite=Lax; Secure`;
+          for (const path of paths) {
+            for (const domain of domains) {
+              document.cookie = `${name}=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; Path=${path}${domain}; SameSite=Lax; Secure`;
+            }
+          }
         }
       };
 
@@ -221,6 +226,23 @@
       const collectRows = document.getElementById("collectRows");
       const waitingLabels = ["li_adsId", "li_fat_id", "li_giant", "Полный url"];
       waitingLabels.forEach(label => addRow(collectRows, label, null));
+
+      document.getElementById("clearCookies").addEventListener("click", () => {
+        clearTestCookies();
+        const cleared = !cookieValue("li_fat_id") && !cookieValue("li_giant");
+        document.getElementById("clearStatus").textContent = cleared
+          ? "Удалены только li_fat_id и li_giant на тестовом origin."
+          : "Cookie всё ещё существует. Удалите данные только для xcrezd.github.io в настройках Safari.";
+      });
+
+      if (afterClear.fat || afterClear.giant) {
+        document.getElementById("statusTitle").textContent = "Тест остановлен: осталась старая cookie";
+        document.getElementById("statusText").textContent = "Insight Tag не загружен, чтобы старое значение не исказило результат. Удалите данные только для xcrezd.github.io и повторите тест.";
+        collectRows.replaceChildren();
+        addRow(collectRows, "Первый /collect", false, "Не отправлен");
+        document.getElementById("sanitizedRequest").textContent = "blocked: stale test cookie remained";
+        return;
+      }
 
       let captured = false;
       const isCollect = raw => {
@@ -291,10 +313,6 @@
         }
       }, 15000);
 
-      document.getElementById("clearCookies").addEventListener("click", () => {
-        clearTestCookies();
-        document.getElementById("clearStatus").textContent = "Удалены только li_fat_id и li_giant на тестовом origin.";
-      });
     })();
   </script>
 </body>
